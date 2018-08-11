@@ -1,0 +1,35 @@
+{
+	"concepts": [
+		"doença" ,
+		"patologia" ,
+		"enfermidade"
+	] ,
+	"subtypes" : [
+		{
+			"concepts" : [
+				"gripe" ,
+				"influenza" ,
+				"resfriado"
+			] ,
+			"subtypes" : [
+				{
+					"concepts" : [
+						"H1N1"
+					] ,
+					"subtypes" : [
+
+					]
+				} ,
+				{
+					"concepts" : [
+						"H5N1" ,
+						"aviária"
+					] ,
+					"subtypes" : [
+
+					]
+				}
+			]
+		}
+	]
+}
