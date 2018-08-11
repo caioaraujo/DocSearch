@@ -28,7 +28,9 @@ class DocSearch:
 
     def stemming_text(self, sorted_file_content):
         stemmer = nltk.stem.RSLPStemmer()
-        return [stemmer.stem(x) for x in sorted_file_content if x != '']
+        result = [stemmer.stem(x) for x in sorted_file_content if x != '']
+
+        return set(result)
 
     def apply_thesaurus(self, term):
 
@@ -38,17 +40,48 @@ class DocSearch:
         with open('thesaurus.json', 'r') as thesaurus_json:
             thesaurus = json.loads(thesaurus_json.read())
 
-        # FIXME: Apply recursivity on thesaurus search
         for word in term_as_list:
-            word = word.lower()
-            concepts = thesaurus.get('concepts')
-            if concepts:
-                if word in concepts:
-                    term_result.append([concept for concept in concepts if concept != word])
+            self.find_in_thesaurus_section(word, thesaurus, term_result)
 
         return ' '.join(set(term_result))
 
+    def find_in_thesaurus_section(self, word, thesaurus_section, result):
+        for k in thesaurus_section.keys():
+
+            if k == 'concepts':
+                concepts = thesaurus_section.get('concepts')
+                if concepts:
+                    if word in concepts:
+                        result.extend([concept for concept in concepts if concept != word])
+
+            else:
+                subtypes = thesaurus_section.get('subtypes')
+                if subtypes:
+                    if type(subtypes) == dict:
+                        self.find_in_thesaurus_section(word, subtypes, result)
+                    elif word in subtypes:
+                        result.extend([subtype for subtype in subtypes if subtype != word])
+
     def search(self, term_to_find):
+        # clean pontuaction from term
+        term_to_find = self.clear_pontuaction(term_to_find)
+
+        # lower term
+        term = term_to_find.lower()
+
+        # apply thesaurus on term
+        term = self.apply_thesaurus(term)
+
+        # remove all accents from term
+        term = unidecode.unidecode(term)
+
+        # remove all stopwords from term
+        term = self.replace_stop_words(term)
+
+        # apply stemmer on term
+        term_stemmed = self.stemming_text(term)
+
+        # Read all files in evaluation-news-txt folder
         dir_name = 'evaluation-news-txt'
         files = listdir(dir_name)
 
@@ -57,31 +90,24 @@ class DocSearch:
 
                 file_content = my_file.read()
 
-            # clean pontuaction from both term and file content
+            # clean pontuaction from file content
             file_content = self.clear_pontuaction(file_content)
-            term_to_find = self.clear_pontuaction(term_to_find)
 
-            # lower both term and file content
+            # lower file content
             file_content = file_content.lower()
-            term = term_to_find.lower()
 
-            # apply thesaurus on term
-            term = self.apply_thesaurus(term)
-
-            # remove all accents from both term and file content
+            # remove all accents from file content
             file_content = unidecode.unidecode(file_content)
-            term = unidecode.unidecode(term)
 
-            # remove all stopwords from both term and file content
+            # remove all stopwords from file content
             file_content = self.replace_stop_words(file_content)
-            term = self.replace_stop_words(term)
 
-            # apply stemmer
+            # apply stemmer on file content
             file_content_stemmed = self.stemming_text(file_content)
-            term_stemmed = self.stemming_text(term)
 
-            if set(term_stemmed).issubset(file_content_stemmed):
-                result[my_file.name] = file_content
+            for text in term_stemmed:
+                if text in file_content_stemmed:
+                    result[my_file.name] = file_content
 
         return result
 
